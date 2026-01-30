@@ -1,0 +1,34 @@
+[workspace.package]
+version = "0.0.1"
+authors = ["Moeru AI"]
+edition = "2024"
+rust-version = "1.90"
+description = ""
+documentation = "https://plast-mem.moeru.ai"
+readme = "README.md"
+homepage = "https://plast-mem.moeru.ai"
+repository = "https://github.com/moeru-ai/plast-mem"
+license = "MIT"
+publish = false
+
+[package]
+name = "plast-mem"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+readme.workspace = true
+license.workspace = true
+authors.workspace = true
+description.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[workspace]
+members = [
+  ".",
+]
+
+[workspace.dependencies]
+
+[dependencies]

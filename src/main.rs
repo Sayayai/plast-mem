@@ -1,21 +1,30 @@
 use std::{env, time::Duration};
 
-use anyhow::Result;
-use axum::{Router, response::Html, routing::get};
-use sqlx::postgres::PgPoolOptions;
+use axum::{Router, extract::State, response::Html, routing::get};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 
 mod utils;
-use utils::shutdown_signal;
+use utils::{AppError, shutdown_signal};
 
+#[axum::debug_handler]
 async fn handler() -> Html<&'static str> {
   Html("<h1>Plast Mem</h1>")
 }
 
+#[axum::debug_handler]
+async fn using_connection_pool_extractor(State(pool): State<PgPool>) -> Result<String, AppError> {
+  Ok(
+    sqlx::query_scalar("select 'hello world from pg'")
+      .fetch_one(&pool)
+      .await?,
+  )
+}
+
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), AppError> {
   dotenvy::dotenv().ok();
-  tracing_subscriber::fmt().init();
+  tracing_subscriber::fmt::init();
 
   // TODO: DatabaseConnection
   // https://github.com/tokio-rs/axum/blob/main/examples/sqlx-postgres/src/main.rs
@@ -30,7 +39,9 @@ async fn main() -> Result<()> {
     )
     .await?;
 
-  let app = Router::new().route("/", get(handler)).with_state(pool);
+  let app = Router::new()
+    .route("/", get(handler).post(using_connection_pool_extractor))
+    .with_state(pool);
   let listener = TcpListener::bind("0.0.0.0:3000").await?;
 
   tracing::info!("server started at http://0.0.0.0:3000");

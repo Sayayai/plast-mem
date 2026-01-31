@@ -3,6 +3,8 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - alaya
+  - apalis
   - direnv
   - dotenv
   - fsrs

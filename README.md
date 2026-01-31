@@ -16,6 +16,31 @@ I plan to first write a minimal implementation referred on SimpleMem and Nemori,
 
 During the `v0.0.x` stage, backward compatibility is not guaranteed at all.
 
+## FAQ (from @kwaa)
+
+### Why reinvent the wheel?
+
+I want a memory layer that's easy to self-host, **not written in Python**, and not too rudimentary. I haven't found a suitable one yet, so I've decided to write my own.
+
+### Is it related to Project AIRI's Alaya?
+
+No, I'm currently developing this project on my own.
+
+But I might draw inspiration from some of it - or I might not.
+
+### Why use {{placeholder}}?
+
+Let me answer them one by one:
+
+- Rust
+  - I previously used TypeScript, but ultimately found that I needed multithreading and background tasks. and I'm more familiar with apalis in Rust for this purpose.
+  - I enjoy writing Rust code.
+- ParadeDB (PostgreSQL + pg_search + pgvector)
+  - I also considered LanceDB, but its website doesn't provide Rust examples for some parts.
+- SQLx
+  - I had used SeaORM before, but its support for Vector wasn't that great.
+  - I can take this opportunity to learn SQL.
+
 ## License
 
 [MIT](LICENSE.md)

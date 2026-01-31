@@ -3,12 +3,18 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - direnv
+  - dotenv
   - fsrs
   - kwaa
   - moeru
+  - msvc
   - nemori
+  - nixpkgs
   - pgvector
+  - pkgs
   - plast
+  - rustc
   - rustls
   - sqlx
   - vchord

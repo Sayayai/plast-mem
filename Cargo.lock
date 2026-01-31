@@ -2944,6 +2944,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
+ "dotenvy",
  "fsrs",
  "pgvector",
  "sqlx",

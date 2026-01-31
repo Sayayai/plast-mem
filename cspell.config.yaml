@@ -3,11 +3,14 @@ ignorePaths: []
 dictionaryDefinitions: []
 dictionaries: []
 words:
+  - fsrs
   - kwaa
   - moeru
   - nemori
   - pgvector
   - plast
+  - rustls
+  - sqlx
   - vchord
   - waifu
 ignoreWords: []

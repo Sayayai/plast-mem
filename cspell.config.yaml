@@ -19,6 +19,7 @@ words:
   - pkgs
   - pkill
   - plast
+  - pname
   - prefs
   - rustc
   - rustls

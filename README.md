@@ -37,9 +37,6 @@ Let me answer them one by one:
   - I enjoy writing Rust code.
 - ParadeDB (PostgreSQL + pg_search + pgvector)
   - I also considered LanceDB, but its website doesn't provide Rust examples for some parts.
-- SQLx
-  - I had used SeaORM before, but its support for Vector wasn't that great.
-  - I can take this opportunity to learn SQL.
 
 ## License
 

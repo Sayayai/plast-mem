@@ -4,6 +4,8 @@ use axum::{Router, extract::State, response::Html, routing::get};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 
+mod api;
+
 mod core;
 
 mod utils;
@@ -43,6 +45,7 @@ async fn main() -> Result<(), AppError> {
 
   let app = Router::new()
     .route("/", get(handler).post(using_connection_pool_extractor))
+    .merge(api::app())
     .with_state(pool);
   let listener = TcpListener::bind("0.0.0.0:3000").await?;
 

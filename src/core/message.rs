@@ -12,9 +12,5 @@ pub enum MessageRole {
 pub struct Message {
   pub role: MessageRole,
   pub content: String,
-  #[serde(
-    with = "chrono::serde::ts_milliseconds_option",
-    skip_serializing_if = "Option::is_none"
-  )]
-  pub date: Option<DateTime<Utc>>,
+  pub timestamp: DateTime<Utc>,
 }

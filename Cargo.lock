@@ -3349,6 +3349,8 @@ dependencies = [
  "futures",
  "plast_mem_db_migration",
  "plast_mem_db_schema",
+ "plast_mem_shared",
+ "plast_mem_worker",
  "sea-orm",
  "serde",
  "serde_json",
@@ -3373,6 +3375,26 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "plast_mem_shared"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "axum",
+]
+
+[[package]]
+name = "plast_mem_worker"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "apalis",
+ "apalis-postgres",
+ "plast_mem_shared",
+ "sea-orm",
+ "tokio",
 ]
 
 [[package]]

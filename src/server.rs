@@ -1,10 +1,11 @@
 use axum::{Router, response::Html, routing::get};
+use plast_mem_shared::AppError;
 use sea_orm::DatabaseConnection;
 use tokio::net::TcpListener;
 
 use crate::{
   api,
-  utils::{AppError, AppState, shutdown_signal},
+  utils::{AppState, shutdown_signal},
 };
 
 #[axum::debug_handler]

@@ -1,7 +1,7 @@
 use super::Message;
-use crate::utils::AppError;
 use anyhow::anyhow;
 use plast_mem_db_schema::message_queue;
+use plast_mem_shared::AppError;
 use sea_orm::{
   ColumnTrait, DatabaseConnection, EntityTrait, ExprTrait, QueryFilter, Set,
   prelude::Expr,

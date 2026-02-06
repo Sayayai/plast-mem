@@ -5,7 +5,7 @@ use apalis::prelude::{BoxDynError, Monitor, WorkerBuilder, WorkerContext};
 use apalis_postgres::PostgresStorage;
 use sea_orm::DatabaseConnection;
 
-use crate::utils::AppError;
+use plast_mem_shared::AppError;
 
 pub async fn worker(db: &DatabaseConnection) -> Result<(), AppError> {
   let backend = PostgresStorage::new(db.get_postgres_connection_pool());

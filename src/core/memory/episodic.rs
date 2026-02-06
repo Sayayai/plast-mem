@@ -1,10 +1,10 @@
+use crate::core::Message;
 use chrono::{DateTime, Utc};
 use plast_mem_db_schema::episodic_memory;
+use plast_mem_shared::AppError;
 use sea_orm::prelude::PgVector;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::{core::Message, utils::AppError};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EpisodicMemory {

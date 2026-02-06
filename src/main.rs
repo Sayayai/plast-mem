@@ -9,12 +9,11 @@ mod api;
 mod core;
 mod server;
 mod utils;
-mod worker;
 
-use utils::AppError;
+use plast_mem_shared::AppError;
 
 use crate::server::server;
-use crate::worker::worker;
+use plast_mem_worker::worker;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {

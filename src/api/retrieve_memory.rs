@@ -1,6 +1,7 @@
-use crate::utils::{AppError, AppState};
+use crate::utils::AppState;
 use axum::extract::State;
 use axum::{Json, http::StatusCode};
+use plast_mem_shared::AppError;
 use serde::Deserialize;
 
 #[derive(Deserialize)]

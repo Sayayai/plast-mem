@@ -1,7 +1,8 @@
 use crate::api::retrieve_memory::RetrieveMemory;
-use crate::utils::{AppError, AppState};
+use crate::utils::AppState;
 use axum::extract::State;
 use axum::{Json, http::StatusCode};
+use plast_mem_shared::AppError;
 
 #[axum::debug_handler]
 pub async fn retrieve_memory_raw(

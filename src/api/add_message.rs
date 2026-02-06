@@ -1,11 +1,12 @@
 use axum::{Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
+use plast_mem_shared::AppError;
 use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
   core::{Message, MessageQueue, MessageRole},
-  utils::{AppError, AppState},
+  utils::AppState,
 };
 
 #[derive(Deserialize)]

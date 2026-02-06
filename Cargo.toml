@@ -27,14 +27,15 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["."]
+members = ["./crates/db_migration", "./crates/db_schema", "."]
 
-[dependencies]
-anyhow = "1.0.100"
-axum = { version = "0.8.8", features = ["macros"] }
-chrono = { version = "0.4.43", features = ["serde"] }
-dotenvy = "0.15.7"
-fsrs = "5.2.0"
+[workspace.dependencies]
+plast_mem_db_migration.path = "./crates/db_migration"
+plast_mem_db_schema.path = "./crates/db_schema"
+sea-orm-migration = { version = "2.0.0-rc.30", features = [
+  "runtime-tokio-rustls",
+  "sqlx-postgres",
+] }
 sea-orm = { version = "2.0.0-rc.30", features = [
   # https://www.sea-ql.org/SeaORM/docs/install-and-config/database-and-async-runtime/#database_driver
   "sqlx-postgres",
@@ -50,6 +51,19 @@ sea-orm = { version = "2.0.0-rc.30", features = [
 serde = "1.0.228"
 serde_json = "1.0.149"
 tokio = { version = "1.49.0", features = ["full"] }
+
+[dependencies]
+plast_mem_db_migration.workspace = true
+plast_mem_db_schema.workspace = true
+anyhow = "1.0.100"
+axum = { version = "0.8.8", features = ["macros"] }
+chrono = { version = "0.4.43", features = ["serde"] }
+dotenvy = "0.15.7"
+fsrs = "5.2.0"
+sea-orm.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 uuid = { version = "1.20.0", features = ["serde", "v4", "v7"] }

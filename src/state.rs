@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use sea_orm::DatabaseConnection;
 use tokio::sync::RwLock;
 
 use crate::core::{EpisodicMemory, MessageQueue};
@@ -8,10 +9,14 @@ use crate::core::{EpisodicMemory, MessageQueue};
 pub struct AppState {
   pub message_queues: Arc<RwLock<Vec<MessageQueue>>>,
   pub memories: Arc<RwLock<Vec<EpisodicMemory>>>,
+  pub db: DatabaseConnection,
 }
 
 impl AppState {
-  pub fn new() -> Self {
-    Self::default()
+  pub fn new(db: DatabaseConnection) -> Self {
+    Self {
+      db,
+      ..Self::default()
+    }
   }
 }

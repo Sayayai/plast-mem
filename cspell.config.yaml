@@ -9,6 +9,7 @@ words:
   - direnv
   - dotenv
   - fsrs
+  - iden
   - kwaa
   - moeru
   - msvc
@@ -19,6 +20,7 @@ words:
   - pkgs
   - pkill
   - plast
+  - plastmem
   - pname
   - prefs
   - rustc

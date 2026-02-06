@@ -1,4 +1,4 @@
-# set dotenv-load
+set dotenv-load
 
 # show available recipes.
 list:
@@ -39,3 +39,15 @@ docker *args='up -d':
 # running plast-mem with database. (args example: just docker-prod down)
 docker-prod *args='up -d':
   docker compose -f docker-compose.yml -f docker-compose.prod.yml {{args}}
+
+# use db_* without underscores.
+db *args='migration up':
+  just db_{{args}}
+
+# apply migrations to database.
+db_migration *args='up':
+  sea-orm-cli migrate {{args}} -d crates/db_migration -u $DATABASE_URL
+
+# generate entities from database.
+db_schema: (db_migration 'up')
+  sea-orm-cli generate entity -l -o crates/db_schema/src -u $DATABASE_URL

@@ -4,9 +4,9 @@ services:
     container_name: plast-mem-db
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=paradedb # TODO: from env
-      - POSTGRES_PASSWORD=0721001f-18f7-452a-9700-6cd4a852633d # TODO: from env
-      - POSTGRES_DB=paradedb # TODO: form env
+      - POSTGRES_USER=plastmem # TODO: from env
+      - POSTGRES_PASSWORD=plastmem # TODO: from env
+      - POSTGRES_DB=plastmem # TODO: form env
     ports:
       - "5432:5432"
     volumes:

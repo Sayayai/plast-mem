@@ -2,4 +2,5 @@
 
 pub mod prelude;
 
+pub mod episodic_memory;
 pub mod message_queue;

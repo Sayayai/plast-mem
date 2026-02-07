@@ -18,3 +18,8 @@ path = "src/lib.rs"
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+tracing = "0.1.44"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+http-body-util = "0.1.3"

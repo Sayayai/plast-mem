@@ -1,0 +1,57 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 每6小时同步一次
+  workflow_dispatch:  # 手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync upstream to main
+        run: |
+          git remote add upstream https://github.com/moeru-ai/plast-mem.git
+          git fetch upstream
+          git checkout main
+          git reset --hard upstream/main
+          git push origin main --force
+
+  sync-dev:
+    needs: sync-main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into dev
+        run: |
+          git fetch origin main
+          git merge origin/main --no-edit -m "chore: sync from upstream" || {
+            echo "::warning::Merge conflict detected, manual resolution required"
+            exit 0
+          }
+          git push origin dev

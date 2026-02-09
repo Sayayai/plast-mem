@@ -1,15 +1,13 @@
 use apalis::prelude::TaskSink;
 use axum::{Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
+use plast_mem_core::{Message, MessageQueue, MessageRole};
 use plast_mem_shared::AppError;
+use plast_mem_worker::{MessageQueueSegmentJob, WorkerJob};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{
-  core::{Message, MessageQueue, MessageRole},
-  utils::AppState,
-};
-use plast_mem_worker::{MessageQueueSegmentJob, WorkerJob};
+use crate::utils::AppState;
 
 #[derive(Deserialize)]
 pub struct AddMessage {

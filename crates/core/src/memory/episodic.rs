@@ -1,6 +1,6 @@
 use crate::Message;
 use chrono::{DateTime, Utc};
-use fsrs::{FSRS, MemoryState};
+use fsrs::{DEFAULT_PARAMETERS, FSRS, FSRS6_DEFAULT_DECAY, MemoryState};
 use plast_mem_db_schema::episodic_memory;
 use plast_mem_llm::embed;
 use plast_mem_shared::AppError;
@@ -9,12 +9,6 @@ use sea_orm::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-/// Default FSRS decay for retrievability calculation.
-/// Uses FSRS-5 default: 0.0 means the crate applies its internal default.
-const FSRS_DECAY: f32 = 0.0;
-/// Candidate pool size for FSRS re-ranking.
-const FSRS_CANDIDATE_LIMIT: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EpisodicMemory {
@@ -70,10 +64,8 @@ impl EpisodicMemory {
     db: &DatabaseConnection,
   ) -> Result<Vec<(Self, f64)>, AppError> {
     let query_embedding = embed(query).await?;
-    let fsrs = FSRS::new(None)?;
-
-    // Fetch a fixed candidate pool for FSRS re-ranking
-    let candidate_limit = FSRS_CANDIDATE_LIMIT;
+    // TODO: move to global state
+    let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))?;
 
     let retrieve_sql = r#"
     WITH
@@ -121,10 +113,10 @@ impl EpisodicMemory {
       DbBackend::Postgres,
       retrieve_sql,
       vec![
-        query.to_string().into(),
-        candidate_limit.into(),
+        query.to_owned().into(),
+        100.into(), // LIMIT 100
         query_embedding.clone().into(),
-        candidate_limit.into(),
+        100.into(), // LIMIT 100
       ],
     );
 
@@ -138,12 +130,13 @@ impl EpisodicMemory {
       let mem = EpisodicMemory::from_model(model)?;
 
       // FSRS re-ranking: multiply RRF score by retrievability
-      let days_elapsed = (now - mem.last_reviewed_at).num_seconds().max(0) as u32 / 86400;
+      let days_elapsed = (now - mem.last_reviewed_at).num_days() as u32;
       let memory_state = MemoryState {
         stability: mem.stability,
         difficulty: mem.difficulty,
       };
-      let retrievability = fsrs.current_retrievability(memory_state, days_elapsed, FSRS_DECAY);
+      let retrievability =
+        fsrs.current_retrievability(memory_state, days_elapsed, FSRS6_DEFAULT_DECAY);
       let final_score = rrf_score * retrievability as f64;
 
       results.push((mem, final_score));

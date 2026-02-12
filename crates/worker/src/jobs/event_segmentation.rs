@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use apalis::prelude::Data;
 use chrono::Utc;
-use fsrs::FSRS;
+use fsrs::{DEFAULT_PARAMETERS, FSRS};
 use plast_mem_core::{EpisodicMemory, Message, MessageQueue, MessageRole};
 use plast_mem_db_schema::episodic_memory;
 use plast_mem_llm::{InputMessage, Role, embed, summarize_messages_with_check};
@@ -92,8 +92,8 @@ pub async fn process_event_segmentation(
   let messages_len = job.messages.len();
 
   // Initialize FSRS state for new memory
-  let fsrs =
-    FSRS::new(None).map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
+  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))
+    .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
   let initial_states = fsrs
     .next_states(None, DESIRED_RETENTION, 0)
     .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;

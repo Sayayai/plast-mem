@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use apalis::prelude::Data;
 use chrono::{DateTime, Utc};
-use fsrs::{FSRS, MemoryState};
+use fsrs::{DEFAULT_PARAMETERS, FSRS, MemoryState};
 use plast_mem_db_schema::episodic_memory;
 use plast_mem_shared::AppError;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
@@ -29,8 +29,8 @@ pub async fn process_memory_review(
   db: Data<DatabaseConnection>,
 ) -> Result<(), WorkerError> {
   let db = db.deref();
-  let fsrs =
-    FSRS::new(None).map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
+  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))
+    .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
 
   for memory_id in &job.memory_ids {
     let Some(model) = episodic_memory::Entity::find_by_id(*memory_id)
@@ -46,7 +46,7 @@ pub async fn process_memory_review(
       continue; // skip stale job to avoid overwriting newer review
     }
 
-    let days_elapsed = (job.reviewed_at - last_reviewed_at).num_seconds().max(0) as u32 / 86400;
+    let days_elapsed = (job.reviewed_at - last_reviewed_at).num_days() as u32;
 
     let current_state = MemoryState {
       stability: model.stability,

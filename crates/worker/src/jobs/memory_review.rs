@@ -4,15 +4,12 @@ use apalis::prelude::Data;
 use chrono::{DateTime, Utc};
 use fsrs::{DEFAULT_PARAMETERS, FSRS, MemoryState};
 use plast_mem_db_schema::episodic_memory;
-use plast_mem_shared::AppError;
+use plast_mem_shared::{AppError, fsrs::DESIRED_RETENTION};
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::jobs::WorkerError;
-
-/// Target retention probability (90%).
-const DESIRED_RETENTION: f32 = 0.9;
 
 /// Job to update FSRS parameters for retrieved memories.
 ///

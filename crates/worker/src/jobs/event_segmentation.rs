@@ -6,15 +6,12 @@ use fsrs::{DEFAULT_PARAMETERS, FSRS};
 use plast_mem_core::{EpisodicMemory, Message, MessageQueue};
 use plast_mem_db_schema::episodic_memory;
 use plast_mem_llm::{embed, summarize_messages_with_check};
-use plast_mem_shared::AppError;
+use plast_mem_shared::{AppError, fsrs::DESIRED_RETENTION};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::jobs::WorkerError;
-
-/// Target retention probability (90%).
-const DESIRED_RETENTION: f32 = 0.9;
 
 /// Job for event segmentation with LLM check
 /// - If `check` is true: LLM decides whether to create memory and returns summary if yes

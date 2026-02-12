@@ -11,8 +11,6 @@ use sea_orm::{DatabaseConnection, EntityTrait};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::jobs::WorkerError;
-
 /// Job for event segmentation with LLM check
 /// - If `check` is true: LLM decides whether to create memory and returns summary if yes
 /// - If `check` is false: LLM directly generates summary
@@ -36,7 +34,7 @@ async fn generate_summary_with_check(
 pub async fn process_event_segmentation(
   job: EventSegmentationJob,
   db: Data<DatabaseConnection>,
-) -> Result<(), WorkerError> {
+) -> Result<(), AppError> {
   let db = db.deref();
 
   // If no messages, nothing to do
@@ -74,11 +72,8 @@ pub async fn process_event_segmentation(
   let messages_len = job.messages.len();
 
   // Initialize FSRS state for new memory
-  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))
-    .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
-  let initial_states = fsrs
-    .next_states(None, DESIRED_RETENTION, 0)
-    .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
+  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))?;
+  let initial_states = fsrs.next_states(None, DESIRED_RETENTION, 0)?;
   let initial_memory = initial_states.good.memory;
 
   // Create EpisodicMemory with FSRS initial state
@@ -102,8 +97,7 @@ pub async fn process_event_segmentation(
 
   episodic_memory::Entity::insert(active_model)
     .exec(db)
-    .await
-    .map_err(AppError::from)?;
+    .await?;
 
   // Clear the processed messages from MessageQueue
   MessageQueue::drain(job.conversation_id, messages_len, &db).await?;

@@ -11,7 +11,7 @@ use sea_orm::DatabaseConnection;
 pub mod jobs;
 pub use jobs::EventSegmentationJob;
 pub use jobs::MemoryReviewJob;
-use jobs::{process_event_segmentation, process_memory_review};
+use jobs::{WorkerError, process_event_segmentation, process_memory_review};
 
 pub async fn worker(
   db: &DatabaseConnection,
@@ -28,7 +28,11 @@ pub async fn worker(
           .backend(segmentation_backend.clone())
           .enable_tracing()
           .data(db.clone())
-          .build(process_event_segmentation)
+          .build(move |job, data| async move {
+            process_event_segmentation(job, data)
+              .await
+              .map_err(WorkerError::from)
+          })
       }
     })
     .register({
@@ -38,13 +42,16 @@ pub async fn worker(
           .backend(review_backend.clone())
           .enable_tracing()
           .data(db.clone())
-          .build(process_memory_review)
+          .build(move |job, data| async move {
+            process_memory_review(job, data)
+              .await
+              .map_err(WorkerError::from)
+          })
       }
     })
     .shutdown_timeout(Duration::from_secs(5))
     .run_with_signal(tokio::signal::ctrl_c())
-    .await
-    .map_err(|err| AppError::new(anyhow::Error::new(err)))?;
+    .await?;
 
   Ok(())
 }

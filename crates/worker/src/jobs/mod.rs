@@ -3,8 +3,11 @@ pub use event_segmentation::*;
 
 mod memory_review;
 pub use memory_review::*;
+
 use plast_mem_shared::AppError;
 
+/// Error type for apalis job boundary.
+/// Jobs internally use `AppError`; this wrapper converts at the worker boundary.
 #[derive(Debug)]
 pub struct WorkerError(pub AppError);
 
@@ -19,5 +22,12 @@ impl std::error::Error for WorkerError {}
 impl From<AppError> for WorkerError {
   fn from(err: AppError) -> Self {
     Self(err)
+  }
+}
+
+// Enable `?` to automatically convert anyhow errors in job functions
+impl From<anyhow::Error> for WorkerError {
+  fn from(err: anyhow::Error) -> Self {
+    Self(AppError::new(err))
   }
 }

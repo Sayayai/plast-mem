@@ -9,8 +9,6 @@ use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::jobs::WorkerError;
-
 /// Job to update FSRS parameters for retrieved memories.
 ///
 /// Currently performs an automatic GOOD review for each retrieved memory,
@@ -24,16 +22,14 @@ pub struct MemoryReviewJob {
 pub async fn process_memory_review(
   job: MemoryReviewJob,
   db: Data<DatabaseConnection>,
-) -> Result<(), WorkerError> {
+) -> Result<(), AppError> {
   let db = db.deref();
-  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))
-    .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
+  let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))?;
 
   for memory_id in &job.memory_ids {
     let Some(model) = episodic_memory::Entity::find_by_id(*memory_id)
       .one(db)
-      .await
-      .map_err(AppError::from)?
+      .await?
     else {
       continue; // memory was deleted, skip
     };
@@ -50,9 +46,7 @@ pub async fn process_memory_review(
       difficulty: model.difficulty,
     };
 
-    let next_states = fsrs
-      .next_states(Some(current_state), DESIRED_RETENTION, days_elapsed)
-      .map_err(|e| WorkerError::from(AppError::new(anyhow::anyhow!("{e}"))))?;
+    let next_states = fsrs.next_states(Some(current_state), DESIRED_RETENTION, days_elapsed)?;
 
     // Auto GOOD review: being retrieved = reinforcement
     let new_state = next_states.good.memory;
@@ -61,7 +55,7 @@ pub async fn process_memory_review(
     active_model.stability = Set(new_state.stability);
     active_model.difficulty = Set(new_state.difficulty);
     active_model.last_reviewed_at = Set(job.reviewed_at.into());
-    active_model.update(db).await.map_err(AppError::from)?;
+    active_model.update(db).await?;
   }
 
   Ok(())

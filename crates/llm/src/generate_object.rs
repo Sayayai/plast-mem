@@ -81,8 +81,7 @@ where
     .next()
     .ok_or(anyhow!("empty message content"))?;
 
-  let result: T = serde_json::from_str(&response)
-    .map_err(|e| AppError::new(anyhow!("Failed to parse JSON response: {e}")))?;
+  let result: T = serde_json::from_str(&response)?;
 
   Ok(result)
 }

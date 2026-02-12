@@ -64,7 +64,6 @@ impl EpisodicMemory {
     db: &DatabaseConnection,
   ) -> Result<Vec<(Self, f64)>, AppError> {
     let query_embedding = embed(query).await?;
-    // TODO: move to global state
     let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))?;
 
     let retrieve_sql = r#"

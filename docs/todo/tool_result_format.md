@@ -40,27 +40,38 @@ Format for `retrieve_memory` API response when used as a tool result for LLM con
 | 1-2 | < 0.7 | ❌ | Top relevant but routine information |
 | 3-5 | any | ❌ | Context references, summaries suffice |
 
-### Manual Override
+### Detail Level
 
 ```rust
+pub enum DetailLevel {
+    /// Smart allocation based on surprise (default)
+    /// Ranks 1-2 with surprise ≥ 0.7 get details
+    Auto,
+    /// No details for any memory
+    None,
+    /// Only first memory gets details (if surprising)
+    Low,
+    /// All returned memories get full details
+    High,
+}
+
 pub struct RetrieveMemory {
     pub query: String,
     /// Maximum number of memories to return
     #[serde(default = "default_limit")]
     pub limit: usize,  // default: 5
-    /// Maximum memories to include full details for.
-    /// None = default smart allocation (ranks 1-2 if surprising)
+    /// Detail level for message inclusion
     #[serde(default)]
-    pub detail_limit: Option<usize>,
+    pub detail: DetailLevel,  // default: Auto
 }
 ```
 
-| `detail_limit` | Behavior |
-|----------------|----------|
-| `None` / omitted | Default: only ranks 1-2 with `surprise ≥ 0.7` get details |
-| `0` | No details for any memory |
-| `3` | Up to top 3 memories get details (if they meet surprise threshold) |
-| `5` | All returned memories get details |
+| `detail` | Behavior |
+|----------|----------|
+| `"auto"` / omitted | Default: ranks 1-2 with `surprise ≥ 0.7` get details |
+| `"none"` | No details for any memory |
+| `"low"` | Only rank 1 gets details (if surprising) |
+| `"high"` | All returned memories get full details |
 
 ## Field Selection
 
@@ -115,15 +126,23 @@ POST /api/v0/retrieve_memory
 ### Deep Context Needed
 ```
 POST /api/v0/retrieve_memory
-{ "query": "what should I learn next", "detail_limit": 3 }
+{ "query": "what should I learn next", "detail": "high" }
 
-// Returns: up to 3 memories with details if surprising
+// Returns: all memories with full details
 ```
 
 ### Explicit Summary Only
 ```
 POST /api/v0/retrieve_memory
-{ "query": "remind me what we discussed", "detail_limit": 0 }
+{ "query": "remind me what we discussed", "detail": "none" }
 
 // Returns: 5 summaries only, no details for any
+```
+
+### Minimal Detail
+```
+POST /api/v0/retrieve_memory
+{ "query": "quick reminder", "detail": "low" }
+
+// Returns: only rank 1 gets details (if surprising)
 ```

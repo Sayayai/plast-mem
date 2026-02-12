@@ -69,9 +69,14 @@ impl BoundaryContext {
 ```rust
 let final_score = rrf_score
     * retrievability as f64
-    * boundary_boost
-    * recency_factor;
+    * boundary_boost;
 ```
+
+| Factor | Purpose |
+|--------|---------|
+| `rrf_score` | Hybrid search relevance (BM25 + vector similarity) |
+| `retrievability` | FSRS memory strength (how likely to recall) |
+| `boundary_boost` | Event boundary type weight (this document) |
 
 ## Rationale
 

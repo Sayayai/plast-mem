@@ -39,18 +39,16 @@ pub async fn add_message(
     timestamp,
   };
 
-  MessageQueue::push(payload.conversation_id, message, &state.db).await?;
-
-  // Get messages from queue to pass to the job
-  let queue = MessageQueue::get(payload.conversation_id, &state.db).await?;
-  let mut job_storage = state.job_storage.clone();
-  job_storage
-    .push(EventSegmentationJob {
-      conversation_id: payload.conversation_id,
-      messages: queue.messages,
-      check: true, // Let LLM decide whether to create memory
-    })
-    .await?;
+  if let Some(check) = MessageQueue::push(payload.conversation_id, message, &state.db).await? {
+    let mut job_storage = state.job_storage.clone();
+    job_storage
+      .push(EventSegmentationJob {
+        conversation_id: payload.conversation_id,
+        messages: check.messages,
+        check: check.check,
+      })
+      .await?;
+  }
 
   Ok(StatusCode::OK)
 }

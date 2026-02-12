@@ -18,6 +18,13 @@ pub struct MessageQueue {
   pub messages: Vec<Message>,
 }
 
+/// Result of checking if event segmentation is needed
+#[derive(Debug, Clone)]
+pub struct SegmentationCheck {
+  pub messages: Vec<Message>,
+  pub check: bool,
+}
+
 impl MessageQueue {
   pub async fn get(id: Uuid, db: &DatabaseConnection) -> Result<Self, AppError> {
     let model = Self::get_or_create_model(id, db).await?;
@@ -60,8 +67,14 @@ impl MessageQueue {
     })
   }
 
-  pub async fn push(id: Uuid, message: Message, db: &DatabaseConnection) -> Result<(), AppError> {
-    Self::check(id, &message, db).await?;
+  /// Push a message to the queue and check if segmentation is needed.
+  /// Returns `Ok(Some(SegmentationCheck))` if a segmentation job should be created.
+  pub async fn push(
+    id: Uuid,
+    message: Message,
+    db: &DatabaseConnection,
+  ) -> Result<Option<SegmentationCheck>, AppError> {
+    let check_result = Self::check(id, &message, db).await?;
 
     let message_value = serde_json::to_value(vec![message])?;
 
@@ -81,22 +94,30 @@ impl MessageQueue {
       return Err(anyhow!("Queue not found").into());
     }
 
-    Ok(())
+    Ok(check_result)
   }
 
-  pub async fn check(id: Uuid, message: &Message, db: &DatabaseConnection) -> Result<(), AppError> {
+  /// Check if event segmentation should be triggered.
+  /// Returns `Ok(Some(SegmentationCheck))` if segmentation is needed.
+  pub async fn check(
+    id: Uuid,
+    message: &Message,
+    db: &DatabaseConnection,
+  ) -> Result<Option<SegmentationCheck>, AppError> {
     let messages = Self::get(id, db).await?.messages;
 
     // Check messages length
     match messages.len() {
       // If fewer than 5 messages are present, skip.
       n if n < 5 => {
-        return Ok(());
+        return Ok(None);
       }
       // If more than 30 messages, force a split.
       n if n >= 30 => {
-        // TODO: storage.push(job, check=false);
-        return Ok(());
+        return Ok(Some(SegmentationCheck {
+          messages: messages.clone(),
+          check: false,
+        }));
       }
       _ => {}
     };
@@ -106,18 +127,22 @@ impl MessageQueue {
     if messages.last().map_or(false, |last_message| {
       message.timestamp - last_message.timestamp > TimeDelta::minutes(15)
     }) {
-      // TODO: storage.push(job, check=false);
-      return Ok(());
+      return Ok(Some(SegmentationCheck {
+        messages: messages.clone(),
+        check: false,
+      }));
     }
 
     // Check message content length
     // If the latest message is five characters or fewer, skip.
     if message.content.chars().count() < 5 {
-      return Ok(());
+      return Ok(None);
     }
 
-    // TODO: storage.push(job, check=true);
-    Ok(())
+    Ok(Some(SegmentationCheck {
+      messages: messages.clone(),
+      check: true,
+    }))
   }
 
   /// Atomically removes the first `count` messages from the queue,

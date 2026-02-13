@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use async_openai::{Client, config::OpenAIConfig, types::CreateEmbeddingRequestArgs};
+use async_openai::{Client, config::OpenAIConfig, types::embeddings::CreateEmbeddingRequestArgs};
 use plastmem_shared::{APP_ENV, AppError};
 use sea_orm::prelude::PgVector;
 

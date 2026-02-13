@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use async_openai::{
   Client,
   config::OpenAIConfig,
-  types::{ChatCompletionRequestMessage, CreateChatCompletionRequestArgs},
+  types::chat::{ChatCompletionRequestMessage, CreateChatCompletionRequestArgs},
 };
 use plastmem_shared::{APP_ENV, AppError};
 

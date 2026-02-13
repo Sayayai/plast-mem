@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use async_openai::{
   Client,
   config::OpenAIConfig,
-  types::{
+  types::chat::{
     ChatCompletionRequestMessage, CreateChatCompletionRequestArgs, ResponseFormat,
     ResponseFormatJsonSchema,
   },

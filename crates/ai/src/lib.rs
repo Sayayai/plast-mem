@@ -1,5 +1,5 @@
 // Re-export async_openai types for consumers
-pub use async_openai::types::{
+pub use async_openai::types::chat::{
   ChatCompletionRequestMessage, ChatCompletionRequestSystemMessage,
   ChatCompletionRequestUserMessage,
 };

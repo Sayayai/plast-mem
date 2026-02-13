@@ -78,6 +78,7 @@ HTTP server and API handlers
 
 ## Further Reading
 
+- [Episodic Memory](architecture/episodic_memory.md) - Core memory type for conversation storage
 - [Segmentation](architecture/segmentation.md) - Segmenter Based on Rule and Event Segmentation Theory
 - [FSRS](architecture/fsrs.md) - Integration with FSRS (Free Spaced Repetition Scheduler)
 - [Memory Retrieval](architecture/retrieve_memory.md) - Retrieve Memory API documentation

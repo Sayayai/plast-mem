@@ -1,8 +1,7 @@
-use axum::{
-  Json, Router,
-  routing::{get, post},
-};
+use axum::{Json, Router, routing::get};
 use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::utils::AppState;
@@ -13,18 +12,26 @@ mod retrieve_memory;
 pub use add_message::{AddMessage, AddMessageMessage};
 pub use retrieve_memory::{RetrieveMemory, RetrieveMemoryRawResult};
 
+pub fn app() -> Router<AppState> {
+  let (router, openapi) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    .routes(routes!(add_message::add_message))
+    .routes(routes!(retrieve_memory::retrieve_memory))
+    .routes(routes!(retrieve_memory::retrieve_memory_raw))
+    .split_for_parts();
+
+  let openapi_json = openapi.clone();
+
+  router
+    .route(
+      "/openapi.json",
+      get(move || async move { Json(openapi_json) }),
+    )
+    .merge(Scalar::with_url("/openapi/", openapi))
+}
+
 #[derive(OpenApi)]
 #[openapi(
-  info(
-    title = "Plast Mem API",
-    version = "0.0.1",
-    description = "Experimental LLM memory layer for cyber waifu"
-  ),
-  paths(
-    add_message::add_message,
-    retrieve_memory::retrieve_memory,
-    retrieve_memory::retrieve_memory_raw
-  ),
+  info(title = "Plast Mem"),
   components(schemas(
     AddMessage,
     AddMessageMessage,
@@ -37,22 +44,3 @@ pub use retrieve_memory::{RetrieveMemory, RetrieveMemoryRawResult};
   ))
 )]
 pub struct ApiDoc;
-
-async fn openapi_json() -> Json<utoipa::openapi::OpenApi> {
-  Json(ApiDoc::openapi())
-}
-
-pub fn app() -> Router<AppState> {
-  Router::new()
-    .route("/api/v0/add_message", post(add_message::add_message))
-    .route(
-      "/api/v0/retrieve_memory",
-      post(retrieve_memory::retrieve_memory),
-    )
-    .route(
-      "/api/v0/retrieve_memory/raw",
-      post(retrieve_memory::retrieve_memory_raw),
-    )
-    .route("/openapi.json", get(openapi_json))
-    .merge(Scalar::with_url("/openapi/", ApiDoc::openapi()))
-}

@@ -1,7 +1,6 @@
 use axum::{Json, Router, routing::get};
 use utoipa::OpenApi;
-use utoipa_axum::router::OpenApiRouter;
-use utoipa_axum::routes;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::utils::AppState;

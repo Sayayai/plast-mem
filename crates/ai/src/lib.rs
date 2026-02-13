@@ -89,7 +89,7 @@ pub async fn segment_events(
       ChatCompletionRequestMessage::User(user),
     ],
     "event_segmentation".to_owned(),
-    Some("Event segmentation analysis with surprise and boundary type".to_owned()),
+    Some("Event segmentation analysis with surprise".to_owned()),
   )
   .await
 }

@@ -1,9 +1,8 @@
-use crate::Message;
 use chrono::{DateTime, Utc};
 use fsrs::{DEFAULT_PARAMETERS, FSRS, FSRS6_DEFAULT_DECAY, MemoryState};
 use plastmem_ai::embed;
 use plastmem_entities::episodic_memory;
-use plastmem_shared::AppError;
+use plastmem_shared::{AppError, Message};
 
 use sea_orm::{
   ConnectionTrait, DatabaseConnection, DbBackend, FromQueryResult, Statement, prelude::PgVector,
@@ -17,6 +16,7 @@ pub struct EpisodicMemory {
   pub id: Uuid,
   pub conversation_id: Uuid,
   pub messages: Vec<Message>,
+  pub title: String,
   pub content: String,
   /// Vector embedding (internal use, not exposed in API)
   #[serde(skip)]
@@ -36,6 +36,7 @@ impl EpisodicMemory {
       id: model.id,
       conversation_id: model.conversation_id,
       messages: serde_json::from_value(model.messages)?,
+      title: model.title,
       content: model.content,
       embedding: model.embedding,
       stability: model.stability,
@@ -53,6 +54,7 @@ impl EpisodicMemory {
       id: self.id,
       conversation_id: self.conversation_id,
       messages: serde_json::to_value(self.messages.clone())?,
+      title: self.title.clone(),
       content: self.content.clone(),
       embedding: self.embedding.clone(),
       stability: self.stability,
@@ -65,25 +67,38 @@ impl EpisodicMemory {
     })
   }
 
+  /// Retrieve episodic memories using hybrid BM25 + vector search with FSRS re-ranking.
+  ///
+  /// When `scope` is `Some(conversation_id)`, only memories from that conversation are searched.
+  /// When `scope` is `None`, all memories are searched globally.
   pub async fn retrieve(
     query: &str,
     limit: u64,
+    scope: Option<Uuid>,
     db: &DatabaseConnection,
   ) -> Result<Vec<(Self, f64)>, AppError> {
     let query_embedding = embed(query).await?;
     let fsrs = FSRS::new(Some(&DEFAULT_PARAMETERS))?;
 
-    let retrieve_sql = r"
+    let scope_filter = if scope.is_some() {
+      "AND conversation_id = $5"
+    } else {
+      ""
+    };
+
+    let retrieve_sql = format!(
+      r"
     WITH
     fulltext AS (
       SELECT id, ROW_NUMBER() OVER (ORDER BY pdb.score(id) DESC) AS r
       FROM episodic_memory
-      WHERE content ||| $1
+      WHERE content ||| $1 {scope_filter}
       LIMIT $2
     ),
     semantic AS (
       SELECT id, ROW_NUMBER() OVER (ORDER BY embedding <=> $3) AS r
       FROM episodic_memory
+      WHERE 1=1 {scope_filter}
       LIMIT $2
     ),
     rrf AS (
@@ -100,6 +115,7 @@ impl EpisodicMemory {
       m.id,
       m.conversation_id,
       m.messages,
+      m.title,
       m.content,
       m.embedding,
       m.stability,
@@ -114,18 +130,20 @@ impl EpisodicMemory {
     JOIN episodic_memory m USING (id)
     ORDER BY r.score DESC
     LIMIT $4;
-    ";
-
-    let retrieve_stmt = Statement::from_sql_and_values(
-      DbBackend::Postgres,
-      retrieve_sql,
-      vec![
-        query.to_owned().into(),
-        100.into(), // LIMIT 100
-        query_embedding.clone().into(),
-        100.into(), // LIMIT 100
-      ],
+    "
     );
+
+    let mut params: Vec<sea_orm::Value> = vec![
+      query.to_owned().into(),
+      100.into(), // candidate limit
+      query_embedding.clone().into(),
+      100.into(), // candidate limit
+    ];
+    if let Some(cid) = scope {
+      params.push(cid.into());
+    }
+
+    let retrieve_stmt = Statement::from_sql_and_values(DbBackend::Postgres, &retrieve_sql, params);
 
     let rows = db.query_all_raw(retrieve_stmt).await?;
     let mut results = Vec::with_capacity(rows.len());
@@ -138,8 +156,8 @@ impl EpisodicMemory {
 
       // FSRS re-ranking: multiply RRF score by retrievability
       // Use 0 if negative (clock skew) or unreasonably large
-      let days_elapsed = u32::try_from((now - mem.last_reviewed_at).num_days().clamp(0, 365 * 100))
-        .unwrap_or(0);
+      let days_elapsed =
+        u32::try_from((now - mem.last_reviewed_at).num_days().clamp(0, 365 * 100)).unwrap_or(0);
       let memory_state = MemoryState {
         stability: mem.stability,
         difficulty: mem.difficulty,

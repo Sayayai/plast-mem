@@ -51,7 +51,7 @@ Wrapped AI SDK
 - `embed.rs`: Create embeddings
 - `generate_text.rs`: Create chat completion
 - `generate_object.rs`: Create structured output (JSON Schema)
-- `lib.rs`: Event segmentation analysis (`segment_events`)
+- `lib.rs`: Re-exports AI primitives (embed, generate_text, generate_object, cosine_similarity)
 
 ### 6. plastmem_shared
 
@@ -85,6 +85,7 @@ HTTP server and API handlers
 ## Further Reading
 
 - [Episodic Memory](architecture/episodic_memory.md) - Core memory type for conversation storage
-- [Segmentation](architecture/segmentation.md) - Segmenter Based on Rule and Event Segmentation Theory
-- [FSRS](architecture/fsrs.md) - Integration with FSRS (Free Spaced Repetition Scheduler)
-- [Memory Retrieval](architecture/retrieve_memory.md) - Retrieve Memory API documentation
+- [Segmentation](architecture/segmentation.md) - Event boundary detection (rules + dual-channel LLM)
+- [FSRS](architecture/fsrs.md) - Spaced repetition mechanics and retrievability
+- [Memory Retrieval](architecture/retrieve_memory.md) - Hybrid search API (BM25 + vector + FSFS rerank)
+- [Memory Review](architecture/memory_review.md) - LLM-based relevance review and FSRS updates

@@ -72,11 +72,11 @@ Brief pipeline:
 
 ### 4. Review (FSRS Update)
 
-Each retrieval triggers background review:
-- Current behavior: auto-GOOD review (retrieval = reinforcement)
+Each retrieval records pending reviews; when event segmentation triggers, a `MemoryReviewJob` evaluates relevance:
+- LLM assigns Again/Hard/Good/Easy ratings based on actual usage in conversation
 - Updates `stability`, `difficulty`, `last_reviewed_at`
 
-See [FSRS](fsrs.md) for details.
+See [Memory Review](memory_review.md) and [FSRS](fsrs.md) for details.
 
 ## Surprise Detection
 

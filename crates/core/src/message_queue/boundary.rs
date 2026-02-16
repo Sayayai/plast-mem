@@ -20,9 +20,6 @@ const TOPIC_SIMILARITY_THRESHOLD: f32 = 0.5;
 /// Above this threshold (high prediction error), a boundary is triggered directly without LLM.
 const SURPRISE_THRESHOLD: f32 = 0.65;
 
-/// Boundary confidence threshold for LLM-detected boundaries.
-const BOUNDARY_CONFIDENCE_THRESHOLD: f32 = 0.7;
-
 /// Weight for new embeddings in the rolling average update.
 /// `(1 - alpha) * current + alpha * new`
 const EMBEDDING_ROLLING_ALPHA: f32 = 0.2;
@@ -36,8 +33,6 @@ const EMBEDDING_ROLLING_ALPHA: f32 = 0.2;
 pub struct BoundaryDetectionOutput {
   /// Whether a meaningful event boundary has been crossed
   pub is_boundary: bool,
-  /// Boundary confidence score (0.0 ~ 1.0)
-  pub confidence: f32,
   /// Updated description of "what is happening now" (when NOT a boundary)
   pub updated_event_model: Option<String>,
 }
@@ -57,8 +52,7 @@ Evaluate boundary signals across multiple dimensions:
   \"speaking of\", \"换个话题\", \"顺便\" that signal a topic transition?
 
 Output:
-- **is_boundary**: true if prediction error is high enough to warrant a new event
-- **confidence**: how confident you are (0.0-1.0)
+- **is_boundary**: true if a meaningful event boundary has been crossed
 - **updated_event_model**: if NOT a boundary, the updated description of what is happening now. \
   If IS a boundary, set to null.";
 
@@ -195,20 +189,10 @@ pub async fn detect_boundary(
   info!(
     conversation_id = %conversation_id,
     is_boundary = detection.is_boundary,
-    confidence = detection.confidence,
     "Topic channel: LLM boundary detection result"
   );
 
-  let is_boundary = detection.is_boundary && detection.confidence >= BOUNDARY_CONFIDENCE_THRESHOLD;
-
-  if !is_boundary && detection.is_boundary {
-    info!(
-      conversation_id = %conversation_id,
-      confidence = detection.confidence,
-      threshold = BOUNDARY_CONFIDENCE_THRESHOLD,
-      "Boundary detected by LLM but confidence too low - skipping"
-    );
-  }
+  let is_boundary = detection.is_boundary;
 
   if !is_boundary {
     // Update event model if the LLM provided one (no boundary case)

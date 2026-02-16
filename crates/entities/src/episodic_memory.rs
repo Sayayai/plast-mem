@@ -2,7 +2,6 @@
 
 use sea_orm::entity::prelude::*;
 
-// Remove Eq derive and change the embedding type to PgVector
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "episodic_memory")]
 pub struct Model {
@@ -12,12 +11,15 @@ pub struct Model {
   #[sea_orm(column_type = "JsonBinary")]
   pub messages: Json,
   #[sea_orm(column_type = "Text")]
-  pub title: String,
-  #[sea_orm(column_type = "Text")]
   pub summary: String,
   pub embedding: PgVector,
+  #[sea_orm(column_type = "Text")]
+  pub title: String,
+  #[sea_orm(column_type = "Float")]
   pub stability: f32,
+  #[sea_orm(column_type = "Float")]
   pub difficulty: f32,
+  #[sea_orm(column_type = "Float")]
   pub surprise: f32,
   pub start_at: DateTimeWithTimeZone,
   pub end_at: DateTimeWithTimeZone,

@@ -15,9 +15,10 @@ use super::MessageQueue;
 /// Below this threshold, the LLM boundary detector is invoked.
 const TOPIC_SIMILARITY_THRESHOLD: f32 = 0.5;
 
-/// Surprise channel: cosine similarity threshold.
-/// Below this threshold (high prediction error), a boundary is triggered directly without LLM.
-const SURPRISE_SIMILARITY_THRESHOLD: f32 = 0.35;
+/// Surprise channel: surprise signal threshold.
+/// Surprise = 1 - cosine_similarity(event_model, new_message).
+/// Above this threshold (high prediction error), a boundary is triggered directly without LLM.
+const SURPRISE_THRESHOLD: f32 = 0.65;
 
 /// Boundary confidence threshold for LLM-detected boundaries.
 const BOUNDARY_CONFIDENCE_THRESHOLD: f32 = 0.7;
@@ -136,7 +137,7 @@ pub async fn detect_boundary(
       conversation_id = %conversation_id,
       similarity = sim,
       surprise = surprise,
-      threshold = SURPRISE_SIMILARITY_THRESHOLD,
+      threshold = SURPRISE_THRESHOLD,
       "Surprise channel"
     );
     surprise
@@ -144,10 +145,7 @@ pub async fn detect_boundary(
     0.0
   };
 
-  // `surprise_signal` is `1.0 - sim`. So `sim < THRESHOLD` is equivalent to `1.0 - surprise_signal < THRESHOLD`,
-  // which simplifies to `surprise_signal > 1.0 - THRESHOLD`.
-  // The check for `surprise_signal > 0.0` is implicitly handled if `SURPRISE_SIMILARITY_THRESHOLD < 1.0`.
-  let surprise_boundary = surprise_signal > 1.0 - SURPRISE_SIMILARITY_THRESHOLD;
+  let surprise_boundary = surprise_signal > SURPRISE_THRESHOLD;
 
   if surprise_boundary {
     info!(

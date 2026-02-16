@@ -8,14 +8,14 @@ Plast Mem is an experimental llm memory layer for cyber waifu. The project is no
 
 When working on Plast Mem, follow this decision tree to navigate the codebase and make changes efficiently:
 
-### 1. Starting a Task
+### Starting a Task
 
 **First, understand what type of change you're making:**
 - Is it a new feature? → Check docs/CHANGE_GUIDE.md for similar patterns
 - Is it a refactor? → Check docs/ARCHITECTURE.md for design principles
 - Is it a bug fix? → Read relevant crate README.md files
 
-### 2. Understanding Change Impact
+### Understanding Change Impact
 
 **Before making changes, trace the impact:**
 
@@ -33,7 +33,7 @@ API endpoint → Server handler → Core service → Entity/DB
 4. **Check trait implementations** in `plastmem_core/src/`
 5. **Verify DB schema** in `plastmem_entities/src/`
 
-### 3. Quick Component Summary
+### Quick Component Summary
 
 - **plastmem**: Entry program - initializes tracing, DB, migrations, job storage, spawns worker and server
 - **plastmem_core**: Core domain logic

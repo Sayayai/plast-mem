@@ -162,24 +162,14 @@ In MVP (Phase 1), both facts simply coexist. `invalid_at` is only set in Phase 2
 #### Phase 1 (MVP): Embedding-Based Dedupe Only
 
 ```rust
-fn normalize(s: &str) -> String {
-    s.trim().to_lowercase()
-}
-
 async fn upsert_fact(new_fact: ExtractedFact, db: &DatabaseConnection) {
     // 1. Find highly similar existing facts (strict threshold)
     let similar = find_similar_facts(&new_fact.embedding, 0.95, db).await;
 
     if let Some(existing) = similar.first() {
-        // High embedding similarity — but verify the object matches.
-        // This prevents merging corrections: "name is Bob" ≈ "name is Alice"
-        // can have high embedding similarity but different objects.
-        if normalize(&existing.object) == normalize(&new_fact.object) {
-            // True duplicate: merge source_ids
-            append_source_ids(existing.id, &new_fact.source_ids, db).await;
-            return;
-        }
-        // Same structure, different object → not a duplicate, fall through to insert
+        // True duplicate: merge source_ids
+        append_source_ids(existing.id, &new_fact.source_ids, db).await;
+        return;
     }
 
     // 2. No match → insert as new fact
@@ -188,7 +178,7 @@ async fn upsert_fact(new_fact: ExtractedFact, db: &DatabaseConnection) {
 }
 ```
 
-**Why 0.95?** Strict enough to only merge true duplicates ("User likes Rust" ≈ "user likes Rust"), without merging distinct facts ("likes Rust" vs "likes TypeScript" ≈ 0.85).
+**Why 0.95?** Strict enough to only merge true duplicates ("User likes Rust" ≈ "user likes Rust"), without merging distinct facts ("likes Rust" vs "likes TypeScript" ≈ 0.85). At this threshold, facts with different objects ("name is Bob" vs "name is Alice") have similarity well below 0.95, so no object check is needed.
 
 **MVP accepts contradictions** — "lives in Beijing" and "lives in Tokyo" can coexist. This is safe: better to preserve noisy signal than to silently delete valid facts with wrong heuristics.
 
@@ -209,7 +199,9 @@ new information genuinely replaces the old (e.g., changing residence).
 
 When a fact is invalidated: `UPDATE semantic_memory SET invalid_at = now() WHERE id = $1`.
 
-### Data Flow: Episode → Facts
+### Data Flow: Episode → Facts (Surprise-Aware)
+
+The extraction job adapts its behavior based on the episode's surprise score. This replaces a standalone Surprise Response system — surprise handling is folded into the extraction pipeline as a single LLM call.
 
 ```
  Event Segmentation creates Episode
@@ -217,9 +209,16 @@ When a fact is invalidated: `UPDATE semantic_memory SET invalid_at = now() WHERE
               ▼
      Semantic Extraction Job
               │
+              ├─ 0. Check episode surprise score
+              │     ├─ surprise < 0.85: standard extraction
+              │     ├─ surprise ≥ 0.85: deep extraction (more thorough prompt)
+              │     └─ surprise ≥ 0.90: deep extraction + surprise_explanation
+              │
               ├─ 1. LLM: extract facts from episode
-              │     Input: episode summary + messages
-              │     Output: Vec<ExtractedFact>
+              │     Input: episode summary + messages + surprise level
+              │     Output: SemanticExtractionOutput
+              │       ├─ facts: Vec<ExtractedFact>
+              │       └─ surprise_explanation: Option<String> (if surprise ≥ 0.90)
               │
               ├─ 2. For each extracted fact:
               │     ├─ Embed the `fact` sentence
@@ -227,8 +226,13 @@ When a fact is invalidated: `UPDATE semantic_memory SET invalid_at = now() WHERE
               │     ├─ Match found  → merge source_ids
               │     └─ No match    → insert new fact
               │
+              ├─ 3. If surprise_explanation exists:
+              │     └─ Store on episode (episodic_memory.surprise_explanation)
+              │
               └─ Done
 ```
+
+**Why not a separate Surprise Response Job?** The "surprise response" actions (deeper extraction, explanation, belief updates) all happen within the same LLM context as fact extraction. A separate job would require a second LLM call to analyze the same episode, with largely redundant output. Folding it into `SemanticExtractionJob` is both cheaper and more coherent.
 
 ### LLM Extraction Interface
 
@@ -236,6 +240,10 @@ When a fact is invalidated: `UPDATE semantic_memory SET invalid_at = now() WHERE
 #[derive(Debug, Deserialize, JsonSchema)]
 struct SemanticExtractionOutput {
     pub facts: Vec<ExtractedFact>,
+
+    /// Only populated when surprise ≥ 0.90.
+    /// Explains why this episode was surprising and what prediction failed.
+    pub surprise_explanation: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -250,24 +258,57 @@ struct ExtractedFact {
 **System prompt guidelines**:
 
 ```
-Extract lasting knowledge about the user from this conversation segment.
+Extract lasting knowledge from this conversation segment.
+
+Categories to extract:
+1. Facts about the user (preferences, personal info, relationships)
+2. Facts about the relationship ("we" subject)
+3. Behavioral rules for the assistant:
+   - Communication preferences the user has expressed
+   - Topics to avoid or emphasize
+   - Interaction patterns and rituals
+   - Conditional behavior (when X happens, do Y)
 
 Rules:
 1. Only extract long-term facts. Ignore transient states ("I'm hungry now" is NOT a fact).
 2. Use subject-predicate-object format.
 3. Include a natural language `fact` sentence for each triple.
 4. Preferences, habits, personal info, relationships, and significant events are good candidates.
-5. Include "we" facts about the relationship dynamic when relevant.
+5. For behavioral rules, use subject = "assistant".
 
 Recommended predicates (use when applicable, create new ones if needed):
 likes, dislikes, prefers, lives_in, works_at, age_is, name_is,
 is_interested_in, has_experience_with, knows_about,
-communicate_in_style, relationship_is, has_shared_reference, has_routine
+communicate_in_style, relationship_is, has_shared_reference, has_routine,
+should, should_not, should_when_[context], responds_to_[trigger]_with
 ```
+
+> [!NOTE]
+> For high-surprise episodes (≥ 0.90), the prompt is extended with:
+> ```
+> This episode had a surprise score of {surprise}/1.0, indicating it significantly
+> diverged from expectations. In addition to extracting facts, provide a brief
+> `surprise_explanation`: why was this surprising? What assumption was challenged?
+> ```
+> This replaces the need for a dedicated Surprise Analysis Job.
+
+### Procedural Memory via Semantic Facts
+
+Procedural rules ("how to behave") are stored as **semantic facts with `subject = "assistant"`** and behavioral predicates. No separate table or extraction pipeline.
+
+```
+("assistant", "should", "use Rust examples when explaining code")
+("assistant", "should_not", "mention user's ex")
+("assistant", "should_when_user_upset", "be gentle and use shorter messages")
+("assistant", "responds_to_oyasumi_with", "おやすみ、いい夢見てね 🌙")
+("we", "have_routine", "Monday morning check-in about the weekend")
+```
+
+The boundary between "what we do" (semantic) and "how I should act" (procedural) is naturally fuzzy. Both are extracted by the same prompt and retrieved together. Separation only happens at presentation time.
 
 ### Retrieval
 
-Semantic memories are returned **separately from episodic memories** in the existing `retrieve_memory` API:
+Semantic memories are returned **separately from episodic memories** in the existing `retrieve_memory` API, with procedural rules (behavioral guidelines) filtered into their own section:
 
 ```markdown
 ## Known Facts
@@ -276,19 +317,25 @@ Semantic memories are returned **separately from episodic memories** in the exis
 - User's cat is named Mochi (sources: 2 conversations)
 - We usually communicate with playful banter (sources: 4 conversations)
 
+## Behavioral Guidelines
+- When user is upset, be gentle and brief (sources: 1 conversation)
+- Always use Rust examples when explaining code (sources: 2 conversations)
+
 ## Episodic Memories
 ## Memory 1 [rank: 1, score: 0.85]
 ...
 ```
 
-Retrieval: BM25 + vector hybrid search on the `fact` field. Only active facts (`invalid_at IS NULL`) are returned. No FSRS re-ranking — facts don't decay.
+Retrieval: vector search on the `fact` field. Only active facts (`invalid_at IS NULL`) are returned. No FSRS re-ranking — facts don't decay.
+
+Presentation-time separation: facts where `subject = "assistant"` with procedural predicates (`should`, `should_not`, `should_when_*`, `responds_to_*_with`) are displayed under "Behavioral Guidelines". All other facts go under "Known Facts".
 
 #### API Integration
 
 No new endpoints. Extend the existing `retrieve_memory` handlers:
 
-- **`/api/v0/retrieve_memory`** (markdown): Add `## Known Facts` section before episodic memories in `format_tool_result()`
-- **`/api/v0/retrieve_memory/raw`** (JSON): Extend response struct with a `facts: Vec<SemanticFactResult>` field alongside `memories`
+- **`/api/v0/retrieve_memory`** (markdown): Add `## Known Facts` and `## Behavioral Guidelines` sections before episodic memories in `format_tool_result()`
+- **`/api/v0/retrieve_memory/raw`** (JSON): Extend response struct with `facts: Vec<SemanticFactResult>` and `guidelines: Vec<SemanticFactResult>` alongside `memories`
 
 This follows the principle of least surprise — callers get richer results from the same API.
 
@@ -308,10 +355,6 @@ CREATE TABLE semantic_memory (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Full-text search on natural language fact
-CREATE INDEX idx_semantic_memory_bm25 ON semantic_memory
-    USING bm25 (fact);
-
 -- Vector search on fact embedding
 CREATE INDEX idx_semantic_memory_embedding ON semantic_memory
     USING hnsw (embedding vector_cosine_ops);
@@ -329,16 +372,19 @@ CREATE INDEX idx_semantic_memory_active_subject ON semantic_memory (subject)
 - [ ] `plastmem_entities::semantic_memory` entity
 - [ ] `plastmem_core::memory::semantic.rs` — `SemanticFact` struct, CRUD, embedding dedupe
 - [ ] `SemanticExtractionJob` — triggered after episode creation
-- [ ] LLM extraction prompt + `generate_object()` call
-- [ ] `SemanticFact::retrieve()` — hybrid search, filter `invalid_at IS NULL`
-- [ ] Modify `retrieve_memory` API to include semantic memories
-- [ ] Update tool result format
+- [ ] LLM extraction prompt (with procedural category) + `generate_object()` call
+- [ ] Surprise-aware extraction: deeper prompt for surprise ≥ 0.85, `surprise_explanation` for ≥ 0.90
+- [ ] Add `surprise_explanation: Option<String>` column to `episodic_memory`
+- [ ] `SemanticFact::retrieve()` — vector search, filter `invalid_at IS NULL`
+- [ ] Modify `retrieve_memory` API: add `## Known Facts` + `## Behavioral Guidelines` sections
+- [ ] Update tool result format (presentation-time filter on `subject = "assistant"`)
 
-### Phase 2: Predict-Calibrate + Conflict Resolution
+### Phase 2: Predict-Calibrate + Conflict Resolution (incorporates Surprise Response)
 
 - [ ] Retrieve related existing facts as LLM context during extraction
 - [ ] Extend `ExtractedFact` with `action` field ("new" / "reinforce" / "invalidate")
 - [ ] LLM-based conflict detection (sets `invalid_at` on contradicted facts)
+- [ ] For high-surprise episodes: LLM identifies which existing beliefs are challenged → `invalidate`
 - [ ] Optional: predicate canonicalization via embedding similarity
 - [ ] Optional: computed confidence score from `source_ids`
 - [ ] Optional: trigger extraction only for high-information episodes
@@ -379,15 +425,15 @@ Episode 10: "I moved to Tokyo"  → (user, lives_in, Tokyo)
              Phase 2: LLM detects conflict → invalidate Beijing
 ```
 
-### D. Correction (object check prevents wrong merge)
+### D. Correction (embedding distance prevents wrong merge)
 
 ```
 Episode 1: "My name is Bob"    → (user, name_is, Bob)
 Episode 3: "Sorry, my name is actually Alice"
                                → (user, name_is, Alice)
                                        ↓
-                           embedding similarity ~0.96 (> 0.95)
-                           but object "bob" ≠ "alice"
+                           embedding similarity ~0.88 (< 0.95)
+                           different names = different embeddings
                                        ↓
              Both coexist (not merged)
              Phase 2: LLM detects correction → invalidate Bob
@@ -395,15 +441,17 @@ Episode 3: "Sorry, my name is actually Alice"
 
 ## Open Questions
 
-2. **Dedupe threshold**: 0.95 is a starting point. Needs empirical validation — too low risks merging distinct facts, too high risks fragmentation.
-3. **Extraction frequency**: Every episode for now. Consider optimizing to high-surprise episodes in Phase 2 if LLM cost becomes a concern.
+1. **Dedupe threshold**: 0.95 is a starting point. Needs empirical validation — too low risks merging distinct facts, too high risks fragmentation.
+2. **Extraction frequency**: Every episode for now. Consider optimizing to high-surprise episodes in Phase 2 if LLM cost becomes a concern.
+3. **Surprise threshold calibration**: Should the 0.85/0.90 thresholds be adaptive based on the user's baseline surprise distribution?
 
 ## References
 
-- [Nemori](https://arxiv.org/abs/2508.03341) — Predict-Calibrate principle
+- [Nemori](https://arxiv.org/abs/2508.03341) — Predict-Calibrate principle, Free-Energy Principle
 - [EDC Framework](https://aclanthology.org/2024.findings-naacl.7/) — Extract, Define, Canonicalize
 - [A-MEM](https://arxiv.org/abs/2502.12110) — Zettelkasten-inspired agentic memory
 - [Complementary Learning Systems](https://en.wikipedia.org/wiki/Complementary_learning_systems) — Hippocampus ↔ Neocortex
+- [Active Inference](https://doi.org/10.1162/neco_a_00912) — Friston et al. (2017), process theory for free-energy minimization
 
 ## What We Don't Do
 
@@ -412,4 +460,7 @@ Episode 3: "Sorry, my name is actually Alice"
 - **No predicate enum**: Prompt guidance only. Canonicalization deferred.
 - **No confidence formula**: `source_ids.len()` is sufficient for MVP.
 - **No LLM conflict detection in MVP**: Embedding dedupe only. Contradictions are safe to coexist temporarily.
-- **No procedural memory**: Out of scope for v0.1.0.
+- **No separate procedural memory table**: Procedural rules reuse semantic memory with `subject = "assistant"` convention.
+- **No separate Surprise Response system**: Surprise-aware behavior is folded into `SemanticExtractionJob` (surprise → deeper extraction + explanation), not a standalone job.
+- **No follow-up question generation**: Could be added later if a consumer exists.
+- **No self-reflection system**: Out of scope — no defined consumer or storage for reflections.

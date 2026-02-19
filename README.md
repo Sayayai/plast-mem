@@ -29,17 +29,19 @@ An LLM evaluates each memory's relevance (Again/Hard/Good/Easy) and updates FSRS
 
 ### What is the current status of this project?
 
-We have not yet released version 0.0.1 because the core functionality is incomplete. However, you are welcome to join us in developing it! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-#### Roadmap
-
-- v0.0.1 - Episodic Memory, FSRS
-- v0.1.0 - Semantic Memory
-<!-- - v1.0.0 - ...Graph? Fact Version Control? maybe we can do more... -->
+We have not yet released version 0.1.0 because the core functionality is incomplete. However, you are welcome to join us in developing it! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Is it related to Project AIRI's Alaya?
 
 No, but I might draw inspiration from some of it - or I might not.
+
+### Which model should I use?
+
+For locally running embedding models, we recommend [Qwen3-Embedding-0.6B](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) - its dimensionality meets requirements and delivers high-quality embeddings.
+
+For other embedding models, simply ensure they can output vectors of 1024 dimensions or higher and support [MRL](https://huggingface.co/blog/matryoshka), like OpenAI's `text-embedding-3-small`.
+
+For chat models, no recommendations are currently available, as further testing is still required.
 
 ## License
 

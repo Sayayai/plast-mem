@@ -1,4 +1,4 @@
-use apalis::prelude::TaskSink;
+use apalis::prelude::{Data, TaskSink};
 use apalis_postgres::PostgresStorage;
 use chrono::Utc;
 use plastmem_core::{
@@ -29,9 +29,9 @@ pub struct EventSegmentationJob {
 
 pub async fn process_event_segmentation(
   job: EventSegmentationJob,
-  db: apalis::prelude::Data<DatabaseConnection>,
-  review_storage: apalis::prelude::Data<PostgresStorage<MemoryReviewJob>>,
-  semantic_storage: apalis::prelude::Data<PostgresStorage<SemanticConsolidationJob>>,
+  db: Data<DatabaseConnection>,
+  review_storage: Data<PostgresStorage<MemoryReviewJob>>,
+  semantic_storage: Data<PostgresStorage<SemanticConsolidationJob>>,
 ) -> Result<(), AppError> {
   let db = &*db;
 

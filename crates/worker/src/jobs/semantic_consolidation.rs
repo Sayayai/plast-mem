@@ -1,6 +1,5 @@
-use plastmem_core::{
-  CONSOLIDATION_EPISODE_THRESHOLD, EpisodicMemory, process_consolidation,
-};
+use apalis::prelude::Data;
+use plastmem_core::{CONSOLIDATION_EPISODE_THRESHOLD, EpisodicMemory, process_consolidation};
 use plastmem_shared::AppError;
 use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
@@ -23,7 +22,7 @@ pub struct SemanticConsolidationJob {
 
 pub async fn process_semantic_consolidation(
   job: SemanticConsolidationJob,
-  db: apalis::prelude::Data<DatabaseConnection>,
+  db: Data<DatabaseConnection>,
 ) -> Result<(), AppError> {
   let db = &*db;
 

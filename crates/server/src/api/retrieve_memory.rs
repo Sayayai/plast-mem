@@ -62,7 +62,7 @@ pub struct SemanticMemoryResult {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct RetrieveMemoryRawResponse {
+pub struct RetrieveMemoryRawResult {
   /// Semantic memories (known facts + behavioral guidelines)
   pub semantic: Vec<SemanticMemoryResult>,
   /// Episodic memories with scores
@@ -83,7 +83,7 @@ pub struct EpisodicMemoryResult {
   path = "/api/v0/retrieve_memory/raw",
   request_body = RetrieveMemory,
   responses(
-    (status = 200, description = "Semantic facts and episodic memories", body = RetrieveMemoryRawResponse),
+    (status = 200, description = "Semantic facts and episodic memories", body = RetrieveMemoryRawResult),
     (status = 400, description = "Query cannot be empty")
   )
 )]
@@ -91,7 +91,7 @@ pub struct EpisodicMemoryResult {
 pub async fn retrieve_memory_raw(
   State(state): State<AppState>,
   Json(payload): Json<RetrieveMemory>,
-) -> Result<Json<RetrieveMemoryRawResponse>, AppError> {
+) -> Result<Json<RetrieveMemoryRawResult>, AppError> {
   if payload.query.is_empty() {
     return Err(AppError::new(anyhow::anyhow!("Query cannot be empty")));
   }
@@ -114,7 +114,7 @@ pub async fn retrieve_memory_raw(
   )
   .await?;
 
-  let response = RetrieveMemoryRawResponse {
+  Ok(Json(RetrieveMemoryRawResult {
     semantic: semantic_results
       .into_iter()
       .map(|(memory, score)| SemanticMemoryResult { memory, score })
@@ -123,9 +123,7 @@ pub async fn retrieve_memory_raw(
       .into_iter()
       .map(|(memory, score)| EpisodicMemoryResult { memory, score })
       .collect(),
-  };
-
-  Ok(Json(response))
+  }))
 }
 
 // --- Tool result (markdown) endpoint ---

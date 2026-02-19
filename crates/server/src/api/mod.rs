@@ -10,7 +10,7 @@ mod retrieve_memory;
 
 pub use add_message::{AddMessage, AddMessageMessage};
 pub use retrieve_memory::{
-  RetrieveMemory, RetrieveMemoryRawResponse, RetrieveMemoryRawResult, SemanticMemoryResult,
+  EpisodicMemoryResult, RetrieveMemory, RetrieveMemoryRawResult, SemanticMemoryResult,
 };
 
 pub fn app() -> Router<AppState> {
@@ -37,8 +37,8 @@ pub fn app() -> Router<AppState> {
     AddMessage,
     AddMessageMessage,
     RetrieveMemory,
-    RetrieveMemoryRawResponse,
     RetrieveMemoryRawResult,
+    EpisodicMemoryResult,
     SemanticMemoryResult,
     plastmem_core::EpisodicMemory,
     plastmem_core::SemanticMemory,

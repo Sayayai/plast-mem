@@ -120,7 +120,7 @@ impl EpisodicMemory {
       )
       .filter(
         episodic_memory::Column::Id.is_in(
-          ids.iter().copied().map(SeaValue::from).collect::<Vec<_>>()
+          ids.iter().copied().map(SeaValue::from)
         )
       )
       .exec(db)

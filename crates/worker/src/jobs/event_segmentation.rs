@@ -75,18 +75,18 @@ pub async fn process_event_segmentation(
         log_msg
       );
       if drain_count > 0 {
-        enqueue_pending_reviews(job.conversation_id, &job.messages, &db, &review_storage).await?;
+        enqueue_pending_reviews(job.conversation_id, &job.messages, db, review_storage).await?;
         if let Some(episode) = create_episode(
           job.conversation_id,
           &job.messages,
           drain_count,
           None,
           0.0,
-          &db,
+          db,
         )
         .await?
         {
-          enqueue_semantic_consolidation(job.conversation_id, episode, &db, semantic_storage)
+          enqueue_semantic_consolidation(job.conversation_id, episode, db, semantic_storage)
             .await?;
         }
       }
@@ -94,7 +94,7 @@ pub async fn process_event_segmentation(
 
     // Needs boundary detection with dual-channel: topic shift + surprise.
     SegmentationAction::NeedsBoundaryDetection => {
-      let result = detect_boundary(job.conversation_id, &job.messages, &db).await?;
+      let result = detect_boundary(job.conversation_id, &job.messages, db).await?;
 
       if result.is_boundary {
         tracing::info!(
@@ -105,24 +105,24 @@ pub async fn process_event_segmentation(
           "Creating episode (boundary detected)"
         );
         if drain_count > 0 {
-          enqueue_pending_reviews(job.conversation_id, &job.messages, &db, &review_storage).await?;
+          enqueue_pending_reviews(job.conversation_id, &job.messages, db, review_storage).await?;
           if let Some(episode) = create_episode(
             job.conversation_id,
             &job.messages,
             drain_count,
             result.latest_embedding,
             result.surprise_signal,
-            &db,
+            db,
           )
           .await?
           {
-            enqueue_semantic_consolidation(job.conversation_id, episode, &db, semantic_storage)
+            enqueue_semantic_consolidation(job.conversation_id, episode, db, semantic_storage)
               .await?;
           }
         }
       } else {
         // No boundary — just process pending reviews, don't drain.
-        enqueue_pending_reviews(job.conversation_id, &job.messages, &db, &review_storage).await?;
+        enqueue_pending_reviews(job.conversation_id, &job.messages, db, review_storage).await?;
       }
     }
   }
@@ -134,7 +134,7 @@ pub async fn process_event_segmentation(
 // Pending review enqueueing (apalis-dependent)
 // ──────────────────────────────────────────────────
 
-/// Take pending reviews from the queue and enqueue a MemoryReviewJob if any exist.
+/// Take pending reviews from the queue and enqueue a `MemoryReviewJob` if any exist.
 async fn enqueue_pending_reviews(
   conversation_id: Uuid,
   context_messages: &[Message],
@@ -153,7 +153,7 @@ async fn enqueue_pending_reviews(
   Ok(())
 }
 
-/// Enqueue a SemanticConsolidationJob if threshold is met or it's a flashbulb memory.
+/// Enqueue a `SemanticConsolidationJob` if threshold is met or it's a flashbulb memory.
 async fn enqueue_semantic_consolidation(
   conversation_id: Uuid,
   episode: plastmem_core::CreatedEpisode,

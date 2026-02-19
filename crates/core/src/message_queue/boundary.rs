@@ -16,7 +16,7 @@ use super::MessageQueue;
 const TOPIC_SIMILARITY_THRESHOLD: f32 = 0.5;
 
 /// Surprise channel: surprise signal threshold.
-/// Surprise = 1 - cosine_similarity(event_model, new_message).
+/// Surprise = 1 - `cosine_similarity(event_model`, `new_message`).
 /// Above this threshold (high prediction error), a boundary is triggered directly without LLM.
 const SURPRISE_THRESHOLD: f32 = 0.65;
 
@@ -67,14 +67,15 @@ async fn llm_topic_shift_detect(
     .collect::<Vec<_>>()
     .join("\n");
 
-  let user_content = if let Some(model) = event_model {
-    format!(
-      "Current event model: {model}\n\n\
-       Conversation:\n{conversation}"
-    )
-  } else {
-    format!("Conversation:\n{conversation}")
-  };
+  let user_content = event_model.map_or_else(
+    || format!("Conversation:\n{conversation}"),
+    |model| {
+      format!(
+        "Current event model: {model}\n\n\
+         Conversation:\n{conversation}"
+      )
+    },
+  );
 
   let system = ChatCompletionRequestSystemMessage::from(BOUNDARY_SYSTEM_PROMPT);
   let user = ChatCompletionRequestUserMessage::from(user_content);
@@ -98,10 +99,10 @@ async fn llm_topic_shift_detect(
 pub struct BoundaryResult {
   /// Whether a boundary was detected (topic channel OR surprise channel).
   pub is_boundary: bool,
-  /// Pre-computed embedding of the latest message (reused by create_episode).
+  /// Pre-computed embedding of the latest message (reused by `create_episode`).
   pub latest_embedding: Option<PgVector>,
   /// Surprise signal: `1 - cosine_sim(event_model_embedding, new_embedding)`.
-  /// 0.0 if event_model_embedding is not available.
+  /// 0.0 if `event_model_embedding` is not available.
   pub surprise_signal: f32,
 }
 
@@ -119,12 +120,12 @@ pub async fn detect_boundary(
   let event_model_embedding = MessageQueue::get_event_model_embedding(conversation_id, db).await?;
 
   // Compute embedding of the latest message
-  let latest_msg = messages.last().map(|m| m.content.as_str()).unwrap_or("");
+  let latest_msg = messages.last().map_or("", |m| m.content.as_str());
   let new_embedding = embed(latest_msg).await?;
 
   // === Surprise channel ===
   // Compute surprise signal regardless of topic channel outcome.
-  let surprise_signal = if let Some(ref em_embedding) = event_model_embedding {
+  let surprise_signal = event_model_embedding.as_ref().map_or(0.0, |em_embedding| {
     let sim = cosine_similarity(em_embedding.as_slice(), new_embedding.as_slice());
     let surprise = 1.0 - sim;
     info!(
@@ -135,9 +136,7 @@ pub async fn detect_boundary(
       "Surprise channel"
     );
     surprise
-  } else {
-    0.0
-  };
+  });
 
   let surprise_boundary = surprise_signal > SURPRISE_THRESHOLD;
 

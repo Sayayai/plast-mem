@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use chrono::{DateTime, Utc};
 use plastmem_ai::{
   ChatCompletionRequestMessage, ChatCompletionRequestSystemMessage,
@@ -40,6 +42,7 @@ pub struct SemanticMemory {
 }
 
 impl SemanticMemory {
+  #[must_use] 
   pub fn from_model(model: semantic_memory::Model) -> Self {
     Self {
       id: model.id,
@@ -57,6 +60,7 @@ impl SemanticMemory {
   }
 
   /// Check if this fact is a procedural / behavioral guideline.
+  #[must_use] 
   pub fn is_behavioral(&self) -> bool {
     self.subject == "assistant"
       && (self.predicate == "should"
@@ -69,7 +73,7 @@ impl SemanticMemory {
   /// Only active facts (`invalid_at IS NULL`) from the specified conversation are returned.
   pub async fn retrieve(
     query: &str,
-    limit: u64,
+    limit: i64,
     conversation_id: Uuid,
     db: &DatabaseConnection,
   ) -> Result<Vec<(Self, f64)>, AppError> {
@@ -117,7 +121,7 @@ impl SemanticMemory {
         conversation_id.into(),       // $2
         100.into(),                   // $3: candidate limit
         query_embedding.into(),       // $4
-        (limit as i64).into(),        // $5
+        limit.into(),        // $5
       ],
     );
 
@@ -333,7 +337,7 @@ async fn invalidate_fact<C: ConnectionTrait>(fact_id: Uuid, db: &C) -> Result<()
 /// Only searches within the specified conversation.
 async fn load_related_facts(
   episodes: &[EpisodicMemory],
-  limit: u64,
+  limit: i64,
   conversation_id: Uuid,
   db: &DatabaseConnection,
 ) -> Result<Vec<SemanticMemory>, AppError> {
@@ -513,7 +517,7 @@ fn extract_valid_fact_ids(existing_facts: &[SemanticMemory]) -> Vec<Uuid> {
 /// This is the CLS-inspired offline replay pipeline:
 /// 1. Load existing related facts (predict — "what do we already know?")
 /// 2. Build consolidation prompt with existing facts + episode batch
-/// 3. Single LLM call → ConsolidationOutput (calibrate — "what changed?")
+/// 3. Single LLM call → `ConsolidationOutput` (calibrate — "what changed?")
 /// 4. Process each result: insert/reinforce/update/invalidate
 /// 5. Mark episodes as consolidated
 ///
@@ -542,21 +546,22 @@ pub async fn process_consolidation(
   } else {
     existing_facts_section.push_str("Current knowledge:\n");
     for fact in &existing_facts {
-      existing_facts_section.push_str(&format!(
-        "- [ID: {}] ({}, {}, {}) — {}\n",
+      let _ = writeln!(
+        existing_facts_section,
+        "- [ID: {}] ({}, {}, {}) — {}",
         fact.id, fact.subject, fact.predicate, fact.object, fact.fact
-      ));
+      );
     }
   }
 
   let mut episodes_section = String::new();
   for (i, ep) in episodes.iter().enumerate() {
-    episodes_section.push_str(&format!("\n--- Episode {} ---\n", i + 1));
-    episodes_section.push_str(&format!("Summary: {}\n", ep.summary));
-    episodes_section.push_str(&format!("Surprise: {:.2}\n", ep.surprise));
-    episodes_section.push_str("Conversation:\n");
+    let _ = writeln!(episodes_section, "\n--- Episode {} ---", i + 1);
+    let _ = writeln!(episodes_section, "Summary: {}", ep.summary);
+    let _ = writeln!(episodes_section, "Surprise: {:.2}", ep.surprise);
+    let _ = writeln!(episodes_section, "Conversation:");
     for msg in &ep.messages {
-      episodes_section.push_str(&format!("  {msg}\n"));
+      let _ = writeln!(episodes_section, "  {msg}");
     }
   }
 

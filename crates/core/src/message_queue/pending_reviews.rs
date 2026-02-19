@@ -12,7 +12,7 @@ use super::{MessageQueue, PendingReview};
 
 impl MessageQueue {
   /// Append a pending review record to the queue.
-  /// Called after retrieve_memory to track which memories were retrieved.
+  /// Called after `retrieve_memory` to track which memories were retrieved.
   pub async fn add_pending_review(
     id: Uuid,
     memory_ids: Vec<Uuid>,

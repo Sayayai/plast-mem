@@ -129,7 +129,7 @@ pub async fn create_episode(
     messages: segment_messages.clone(),
     title: episode.title,
     summary: episode.summary.clone(),
-    embedding: embedding,
+    embedding,
     stability: boosted_stability,
     difficulty: initial_memory.difficulty,
     surprise,

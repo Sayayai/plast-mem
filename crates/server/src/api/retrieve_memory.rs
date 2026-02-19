@@ -19,6 +19,14 @@ const fn default_semantic_limit() -> u64 {
   20
 }
 
+const fn sanitize_limit(value: u64) -> i64 {
+  if value > 0 && value <= 1000 {
+    value as i64
+  } else {
+    100
+  }
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct RetrieveMemory {
   /// Conversation ID to filter memories by and associate pending review with
@@ -99,7 +107,7 @@ pub async fn retrieve_memory_raw(
   let (semantic_results, episodic_results) = tokio::try_join!(
     SemanticMemory::retrieve(
       &payload.query,
-      payload.semantic_limit,
+      sanitize_limit(payload.semantic_limit),
       payload.conversation_id,
       &state.db
     ),
@@ -155,7 +163,7 @@ pub async fn retrieve_memory(
   let (semantic_results, episodic_results) = tokio::try_join!(
     SemanticMemory::retrieve(
       &payload.query,
-      payload.semantic_limit,
+      sanitize_limit(payload.semantic_limit),
       payload.conversation_id,
       &state.db
     ),

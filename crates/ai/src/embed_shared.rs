@@ -27,9 +27,7 @@ pub fn process_embedding(mut vec: Vec<f32>) -> Result<Vec<f32>, AppError> {
       Ok(vec)
     }
     d => Err(AppError::new(anyhow::anyhow!(
-      "embedding dimension {} is less than required {}",
-      d,
-      TARGET_DIM
+      "embedding dimension {d} is less than required {TARGET_DIM}"
     ))),
   }
 }

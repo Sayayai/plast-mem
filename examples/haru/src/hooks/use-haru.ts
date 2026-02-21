@@ -56,6 +56,9 @@ export const useHaru = (conversation_id: string) => {
   const { error, isMutating, trigger: send } = useSWRMutation<void, Error, [string, string], string>(
     ['haru/send', conversation_id],
     async (_, { arg: input }) => {
+      if (input.trim().length === 0)
+        return
+
       await pushMessage({ content: input, role: 'user' })
 
       const now = Temporal.Now.instant()

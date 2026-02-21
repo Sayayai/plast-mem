@@ -1,23 +1,21 @@
 import { join } from 'node:path'
-import { cwd, loadEnvFile } from 'node:process'
+import { loadEnvFile } from 'node:process'
 
-import { findWorkspaceDir } from '@pnpm/find-workspace-dir'
 import { render } from 'ink'
 
 import { ChatApp } from './chat'
+import { workspaceDir } from './utils/workspace-dir'
 
 const main = async () => {
-  const workspace = await findWorkspaceDir(cwd())
-
   try {
-    loadEnvFile(join(workspace!, '.env'))
+    loadEnvFile(join(workspaceDir, '.env'))
   }
   catch { }
 
   // eslint-disable-next-line no-console
   console.clear()
 
-  render(<ChatApp workspace={workspace!} />)
+  render(<ChatApp />)
 }
 
 // if (import.meta.main) {

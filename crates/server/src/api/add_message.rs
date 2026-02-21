@@ -21,6 +21,7 @@ pub struct AddMessageMessage {
   pub role: MessageRole,
   pub content: String,
   #[serde(
+    default,
     with = "chrono::serde::ts_milliseconds_option",
     skip_serializing_if = "Option::is_none"
   )]

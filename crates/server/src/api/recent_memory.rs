@@ -55,7 +55,7 @@ pub async fn recent_memory_raw(
 
   // Apply days filter if provided
   if let Some(days) = payload.days_limit {
-    let since = Utc::now() - Duration::days(days as i64);
+    let since = Utc::now() - Duration::days(days.cast_signed());
     query = query.filter(episodic_memory::Column::CreatedAt.gte(since));
   }
 
@@ -94,7 +94,7 @@ pub async fn recent_memory(
 
   // Apply days filter if provided
   if let Some(days) = payload.days_limit {
-    let since = Utc::now() - Duration::days(days as i64);
+    let since = Utc::now() - Duration::days(days.cast_signed());
     query = query.filter(episodic_memory::Column::CreatedAt.gte(since));
   }
 

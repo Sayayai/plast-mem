@@ -242,9 +242,14 @@ async fn load_related_facts(
   let mut facts = Vec::new();
 
   for (ep, embedding) in episodes.iter().zip(embeddings.into_iter()) {
-    let results =
-      SemanticMemory::retrieve_by_vector(&ep.summary, embedding, RELATED_FACTS_LIMIT, conversation_id, db)
-        .await?;
+    let results = SemanticMemory::retrieve_by_vector(
+      &ep.summary,
+      embedding,
+      RELATED_FACTS_LIMIT,
+      conversation_id,
+      db,
+    )
+    .await?;
     for (fact, _) in results {
       if seen_ids.insert(fact.id) {
         facts.push(fact);
@@ -429,8 +434,7 @@ pub async fn process_consolidation(
   let conversation_id = episodes[0].conversation_id;
 
   // 1. Load related existing facts (the "predict" step)
-  let existing_facts =
-    load_related_facts(episodes, conversation_id, db).await?;
+  let existing_facts = load_related_facts(episodes, conversation_id, db).await?;
   let valid_fact_ids = extract_valid_fact_ids(&existing_facts);
 
   // 2. Build the consolidation prompt

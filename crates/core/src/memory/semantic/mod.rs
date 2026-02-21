@@ -8,8 +8,7 @@ use plastmem_ai::embed;
 use plastmem_entities::semantic_memory;
 use plastmem_shared::AppError;
 use sea_orm::{
-  ConnectionTrait, DatabaseConnection, DbBackend, FromQueryResult, Statement,
-  prelude::PgVector,
+  ConnectionTrait, DatabaseConnection, DbBackend, FromQueryResult, Statement, prelude::PgVector,
 };
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -125,11 +124,11 @@ impl SemanticMemory {
       DbBackend::Postgres,
       sql,
       vec![
-        query.to_owned().into(),      // $1
-        conversation_id.into(),       // $2
+        query.to_owned().into(),          // $1
+        conversation_id.into(),           // $2
         RETRIEVAL_CANDIDATE_LIMIT.into(), // $3: candidate limit
-        query_embedding.into(),       // $4
-        limit.into(),                 // $5
+        query_embedding.into(),           // $4
+        limit.into(),                     // $5
       ],
     );
 

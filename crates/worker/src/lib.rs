@@ -13,8 +13,7 @@ pub use jobs::EventSegmentationJob;
 pub use jobs::MemoryReviewJob;
 pub use jobs::SemanticConsolidationJob;
 use jobs::{
-  WorkerError, process_event_segmentation, process_memory_review,
-  process_semantic_consolidation,
+  WorkerError, process_event_segmentation, process_memory_review, process_semantic_consolidation,
 };
 
 pub async fn worker(
@@ -37,11 +36,13 @@ pub async fn worker(
           .data(db.clone())
           .data(review_backend.clone())
           .data(semantic_backend.clone())
-          .build(move |job, data, review_storage, semantic_storage| async move {
-            process_event_segmentation(job, data, review_storage, semantic_storage)
-              .await
-              .map_err(WorkerError::from)
-          })
+          .build(
+            move |job, data, review_storage, semantic_storage| async move {
+              process_event_segmentation(job, data, review_storage, semantic_storage)
+                .await
+                .map_err(WorkerError::from)
+            },
+          )
       }
     })
     .register({

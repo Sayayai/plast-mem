@@ -21,7 +21,7 @@ const fn default_semantic_limit() -> u64 {
 
 const fn sanitize_limit(value: u64) -> i64 {
   if value > 0 && value <= 1000 {
-    value as i64
+    value.cast_signed()
   } else {
     100
   }

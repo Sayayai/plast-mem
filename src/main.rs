@@ -28,7 +28,12 @@ async fn main() -> Result<(), AppError> {
   let semantic_job_storage = PostgresStorage::<SemanticConsolidationJob>::new(pool);
 
   let _ = tokio::try_join!(
-    worker(&db, segment_job_storage.clone(), review_job_storage.clone(), semantic_job_storage.clone()),
+    worker(
+      &db,
+      segment_job_storage.clone(),
+      review_job_storage.clone(),
+      semantic_job_storage.clone()
+    ),
     server(db.clone(), segment_job_storage)
   );
 

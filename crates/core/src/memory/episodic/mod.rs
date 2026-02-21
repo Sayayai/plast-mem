@@ -8,7 +8,8 @@ use plastmem_shared::{AppError, Message};
 
 use sea_orm::{
   ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait, FromQueryResult,
-  QueryFilter, QueryOrder, Statement, prelude::{Expr, PgVector},
+  QueryFilter, QueryOrder, Statement,
+  prelude::{Expr, PgVector},
 };
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -102,10 +103,7 @@ impl EpisodicMemory {
   }
 
   /// Mark the given episodes as consolidated (bulk update).
-  pub async fn mark_consolidated<C: ConnectionTrait>(
-    ids: &[Uuid],
-    db: &C,
-  ) -> Result<(), AppError> {
+  pub async fn mark_consolidated<C: ConnectionTrait>(ids: &[Uuid], db: &C) -> Result<(), AppError> {
     use sea_orm::sea_query::Value as SeaValue;
 
     if ids.is_empty() {
@@ -116,15 +114,8 @@ impl EpisodicMemory {
 
     // Bulk update: UPDATE episodic_memory SET consolidated_at = now WHERE id = ANY(ids)
     episodic_memory::Entity::update_many()
-      .col_expr(
-        episodic_memory::Column::ConsolidatedAt,
-        Expr::value(now),
-      )
-      .filter(
-        episodic_memory::Column::Id.is_in(
-          ids.iter().copied().map(SeaValue::from)
-        )
-      )
+      .col_expr(episodic_memory::Column::ConsolidatedAt, Expr::value(now))
+      .filter(episodic_memory::Column::Id.is_in(ids.iter().copied().map(SeaValue::from)))
       .exec(db)
       .await?;
 
@@ -189,11 +180,11 @@ impl EpisodicMemory {
     ";
 
     let params: Vec<sea_orm::Value> = vec![
-      query.to_owned().into(),      // $1
-      conversation_id.into(),       // $2
-      100.into(),                   // $3: candidate limit
-      query_embedding.into(),       // $4
-      100.into(),                   // $5: final limit
+      query.to_owned().into(), // $1
+      conversation_id.into(),  // $2
+      100.into(),              // $3: candidate limit
+      query_embedding.into(),  // $4
+      100.into(),              // $5: final limit
     ];
 
     let retrieve_stmt = Statement::from_sql_and_values(DbBackend::Postgres, retrieve_sql, params);

@@ -35,7 +35,7 @@ const buildSystemPrompt = (recentMemoryText: string, sessionStart: Date): string
   const elapsedMs = now.getTime() - sessionStart.getTime()
   const elapsedMin = Math.floor(elapsedMs / 60000)
   const elapsed = elapsedMin < 1 ? 'just now' : `${elapsedMin}m ago`
-  return (promptTemplate as string)
+  return (promptTemplate)
     .replace('{recentMemory()}', recentMemoryText)
     .replace('{time}', now.toLocaleString())
     .replace('{session_start_time}', sessionStart.toLocaleString())
